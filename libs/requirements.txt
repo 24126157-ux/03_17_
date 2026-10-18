@@ -1,0 +1,8 @@
+# Danh mục các thư viện Python phục vụ đồ án (Folder libs)
+pymongo>=4.6.0
+dnspython>=2.4.0
+pandas>=2.0.0
+requests>=2.31.0
+flask>=3.0.0
+flask-login>=0.6.3
+werkzeug>=3.0.0
