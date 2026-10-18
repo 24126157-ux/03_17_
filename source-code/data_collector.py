@@ -18,7 +18,7 @@ from datetime import datetime
 # Lưu ý: Thay đổi Connection String nếu sử dụng tài khoản khác
 MONGODB_URI = os.getenv(
     "MONGODB_URI",
-    "mongodb+srv://admin:Admin123456@cluster0.lifcwij.mongodb.net/?retryWrites=true&w=majority"
+    "mongodb+srv://24126088_db_user:HL5evsytleNo4V0p@cluster0.e1l29uo.mongodb.net/?retryWrites=true&w=majority"
 )
 DATABASE_NAME = "ecommerce"
 COLLECTION_NAME = "transactions"
