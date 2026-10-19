@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}TikTok Shop Big Data Portal{% endblock %} - Nhóm 17</title>
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">
+                    <i class="fa-brands fa-tiktok"></i>
+                </div>
+                <div class="brand-text">
+                    <h2>TIKTOK SHOP</h2>
+                    <span>Big Data Portal • Nhóm 17</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">PHÂN TÍCH & BÁO CÁO</div>
+                <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Bảng điều khiển (Dashboard)</span>
+                </a>
+
+                {% if g.user and g.user.role in ['Admin', 'Analyst', 'Staff'] %}
+                <a href="{{ url_for('view_transactions') }}" class="nav-link {% if request.endpoint == 'view_transactions' %}active{% endif %}">
+                    <i class="fa-solid fa-receipt"></i>
+                    <span>Dữ liệu đơn hàng (8.5K)</span>
+                    <span class="badge badge-count">8.500</span>
+                </a>
+                {% endif %}
+
+                {% if g.user and g.user.role == 'Admin' %}
+                <div class="nav-section-title">QUẢN TRỊ VIÊN CẤP CAO</div>
+                <a href="{{ url_for('user_management') }}" class="nav-link {% if request.endpoint == 'user_management' %}active{% endif %}">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <span>Phân quyền người dùng (RBAC)</span>
+                    <span class="badge badge-admin-nav">Admin</span>
+                </a>
+                {% endif %}
+
+                <div class="nav-section-title">HỒ SƠ TÀI KHOẢN</div>
+                <a href="{{ url_for('profile') }}" class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}">
+                    <i class="fa-solid fa-id-badge"></i>
+                    <span>Thông tin cá nhân</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-brief">
+                    <div class="user-avatar-sm">
+                        {{ g.user.fullname[0] if g.user and g.user.fullname else 'U' }}
+                    </div>
+                    <div class="user-brief-info">
+                        <strong>{{ g.user.fullname if g.user else 'Khách' }}</strong>
+                        <span class="role-badge role-{{ g.user.role.lower() if g.user else 'user' }}">
+                            {{ g.user.role if g.user else 'Guest' }}
+                        </span>
+                    </div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="btn-logout" title="Đăng xuất khỏi hệ thống">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </a>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT WRAPPER -->
+        <div class="main-wrapper">
+            <!-- TOP NAVBAR -->
+            <header class="top-navbar">
+                <div class="navbar-left">
+                    <button class="menu-toggle" id="menuToggle" aria-label="Toggle Menu">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div class="page-title">
+                        <h1>{% block page_title %}Cổng Phân Tích Dữ Liệu TikTok Shop{% endblock %}</h1>
+                        <p class="subtitle">Đồ án môn Phân Tích Dữ Liệu Lớn Trong Kinh Doanh (ABDA433708) — Nhóm 17</p>
+                    </div>
+                </div>
+
+                <div class="navbar-right">
+                    <div class="system-status">
+                        <span class="status-dot"></span>
+                        <span>MongoDB Atlas: <strong>Connected (8.5K records)</strong></span>
+                    </div>
+                    <div class="user-badge-header">
+                        <span class="role-badge role-{{ g.user.role.lower() if g.user else 'user' }}">
+                            <i class="fa-solid {% if g.user and g.user.role == 'Admin' %}fa-crown{% elif g.user and g.user.role == 'Analyst' %}fa-chart-pie{% elif g.user and g.user.role == 'Staff' %}fa-user-tie{% else %}fa-user{% endif %}"></i>
+                            {{ g.user.role if g.user else 'User' }}
+                        </span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- FLASH ALERTS -->
+            <div class="flash-messages">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">
+                                <i class="fa-solid {% if category == 'success' %}fa-circle-check{% elif category == 'danger' %}fa-circle-exclamation{% elif category == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
+                                <span>{{ message }}</span>
+                                <button type="button" class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <!-- PAGE CONTENT -->
+            <main class="content-body">
+                {% block content %}{% endblock %}
+            </main>
+
+            <!-- FOOTER -->
+            <footer class="app-footer">
+                <p>&copy; 2026 Đồ Án Cuối Kỳ Môn Big Data • Nhóm 17 (Trần Quang Huy - 24126088)</p>
+                <div class="footer-links">
+                    <span>Trường Đại Học Sư Phạm Kỹ Thuật TP.HCM (HCMUTE)</span>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Toggle Sidebar Mobile Script -->
+    <script>
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+        if (menuToggle && sidebar) {
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+            });
+        }
+    </script>
+</body>
+</html>

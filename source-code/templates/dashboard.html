@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+
+{% block title %}Bảng Điều Khiển Tổng Quan (Dashboard){% endblock %}
+{% block page_title %}Bảng Điều Khiển & Phân Tích Dữ Liệu TikTok Shop{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+
+    <!-- ===== GREETING & ROLE BANNER (HIỂN THỊ ĐỘNG THEO 4 ROLE) ===== -->
+    {% if g.user and g.user.role == 'Admin' %}
+    <div class="welcome-banner welcome-admin">
+        <div class="welcome-text">
+            <h2>👑 Xin chào, {{ g.user.fullname }}!</h2>
+            <p>Bạn đang đăng nhập với quyền <strong>ADMIN (Quản Trị Viên Tối Cao)</strong> — toàn quyền kiểm soát hệ thống, thiết lập phân quyền người dùng (RBAC) và theo dõi toàn bộ dữ liệu 8.500 giao dịch TikTok Shop.</p>
+        </div>
+        <div class="welcome-role">
+            <span>Vai trò xác thực:</span>
+            <span class="role-badge role-admin">
+                <i class="fa-solid fa-crown"></i> Admin — Toàn Quyền
+            </span>
+        </div>
+    </div>
+
+    {% elif g.user and g.user.role == 'Analyst' %}
+    <div class="welcome-banner welcome-analyst">
+        <div class="welcome-text">
+            <h2>📊 Xin chào, {{ g.user.fullname }}!</h2>
+            <p>Bạn đang đăng nhập với quyền <strong>ANALYST (Chuyên Viên Phân Tích Big Data)</strong> — toàn quyền truy cập các chỉ số GMV, AOV, phân bổ kênh Livestream, xếp hạng KOL/Creator và phân tích đơn hàng bất thường (Anomaly Detection).</p>
+        </div>
+        <div class="welcome-role">
+            <span>Vai trò xác thực:</span>
+            <span class="role-badge role-analyst">
+                <i class="fa-solid fa-chart-pie"></i> Analyst — Phân Tích Dữ Liệu
+            </span>
+        </div>
+    </div>
+
+    {% elif g.user and g.user.role == 'Staff' %}
+    <div class="welcome-banner welcome-staff">
+        <div class="welcome-text">
+            <h2>🛠️ Xin chào, {{ g.user.fullname }}!</h2>
+            <p>Bạn đang đăng nhập với quyền <strong>STAFF (Nhân Viên)</strong> — có thể theo dõi và tra cứu danh sách 8.500 đơn hàng TikTok Shop, nhưng không có quyền can thiệp vào tài khoản hay phân quyền người dùng.</p>
+        </div>
+        <div class="welcome-role">
+            <span>Vai trò xác thực:</span>
+            <span class="role-badge role-staff">
+                <i class="fa-solid fa-user-tie"></i> Staff — Vận Hành
+            </span>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="welcome-banner welcome-user">
+        <div class="welcome-text">
+            <h2>🛒 Xin chào, {{ g.user.fullname if g.user else 'Bạn' }}!</h2>
+            <p>Bạn đang đăng nhập với quyền <strong>USER (Khách Hàng Thành Viên)</strong> — hệ thống phân quyền (RBAC) chỉ cho phép bạn xem thông tin cá nhân và lịch sử tài khoản của chính mình.</p>
+        </div>
+        <div class="welcome-role">
+            <span>Vai trò xác thực:</span>
+            <span class="role-badge role-user">
+                <i class="fa-solid fa-user"></i> User — Khách Hàng
+            </span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ===== KPI STATS CARDS (DÀNH CHO ADMIN, ANALYST, STAFF) ===== -->
+    {% if g.user and g.user.role in ['Admin', 'Analyst', 'Staff'] %}
+    <div class="stats-grid">
+        <!-- TỔNG ĐƠN HÀNG -->
+        <div class="stat-card stat-blue">
+            <div class="stat-icon">
+                <i class="fa-solid fa-bag-shopping"></i>
+            </div>
+            <div class="stat-details">
+                <span class="stat-label">Tổng Đơn Hàng TikTok Shop</span>
+                <h3 class="stat-value">{{ "{:,}".format(total_orders) }}</h3>
+                <span class="stat-trend trend-up"><i class="fa-solid fa-database"></i> Dữ liệu MongoDB Atlas</span>
+            </div>
+        </div>
+
+        <!-- TỔNG DOANH THU GMV -->
+        <div class="stat-card stat-emerald">
+            <div class="stat-icon">
+                <i class="fa-solid fa-money-bill-trend-up"></i>
+            </div>
+            <div class="stat-details">
+                <span class="stat-label">Tổng Doanh Thu (GMV)</span>
+                <h3 class="stat-value">{{ "{:,.0f}".format(total_revenue) }} đ</h3>
+                <span class="stat-trend trend-up"><i class="fa-solid fa-arrow-trend-up"></i> Tăng trưởng TikTok Live</span>
+            </div>
+        </div>
+
+        <!-- GIÁ TRỊ TRUNG BÌNH ĐƠN (AOV) -->
+        <div class="stat-card stat-indigo">
+            <div class="stat-icon">
+                <i class="fa-solid fa-receipt"></i>
+            </div>
+            <div class="stat-details">
+                <span class="stat-label">Giá Trị Trung Bình Đơn (AOV)</span>
+                <h3 class="stat-value">{{ "{:,.0f}".format(avg_order_value) }} đ</h3>
+                <span class="stat-trend"><i class="fa-solid fa-calculator"></i> GMV / Số Đơn</span>
+            </div>
+        </div>
+
+        <!-- CẢNH BÁO BẤT THƯỜNG (ANOMALY DETECTION) -->
+        <div class="stat-card stat-amber">
+            <div class="stat-icon">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="stat-details">
+                <span class="stat-label">Cảnh Báo Bất Thường (Anomaly)</span>
+                <h3 class="stat-value" style="color: #e11d48;">{{ total_anomalies }} đơn</h3>
+                <span class="stat-trend"><i class="fa-solid fa-shield-virus"></i> Phục vụ Machine Learning</span>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- KHÁCH HÀNG (USER): CHỈ THẤY HỒ SƠ CÁ NHÂN -->
+    <div class="stats-grid">
+        <div class="stat-card stat-blue">
+            <div class="stat-icon"><i class="fa-solid fa-id-card"></i></div>
+            <div class="stat-details">
+                <span class="stat-label">Tài Khoản</span>
+                <h3 class="stat-value" style="font-size:1.2rem;">{{ g.user.username }}</h3>
+                <span class="stat-trend"><i class="fa-solid fa-circle-check"></i> Đã xác thực</span>
+            </div>
+        </div>
+        <div class="stat-card stat-emerald">
+            <div class="stat-icon"><i class="fa-solid fa-envelope"></i></div>
+            <div class="stat-details">
+                <span class="stat-label">Email Liên Hệ</span>
+                <h3 class="stat-value" style="font-size:1rem;">{{ g.user.email }}</h3>
+                <span class="stat-trend trend-up"><i class="fa-solid fa-circle-check"></i> Trạng thái hoạt động</span>
+            </div>
+        </div>
+        <div class="stat-card stat-amber">
+            <div class="stat-icon"><i class="fa-solid fa-lock"></i></div>
+            <div class="stat-details">
+                <span class="stat-label">Phân Quyền RBAC</span>
+                <h3 class="stat-value" style="font-size:1.2rem;">Hạn Chế (User)</h3>
+                <span class="stat-trend"><i class="fa-solid fa-shield-halved"></i> Chỉ xem cá nhân</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+
+    <!-- ===== NỘI DUNG CHÍNH THEO VAI TRÒ (RBAC CONTENT) ===== -->
+    {% if g.user and g.user.role in ['Admin', 'Analyst'] %}
+    <!-- ===================== ADMIN & ANALYST: PHÂN TÍCH TIKTOK SHOP TOÀN DIỆN ===================== -->
+    <div class="role-section-header role-admin-header">
+        <i class="fa-solid fa-chart-line"></i>
+        <span>TRUNG TÂM PHÂN TÍCH DỮ LIỆU TIKTOK SHOP (DÀNH CHO {{ g.user.role|upper }})</span>
+    </div>
+
+    <!-- HÀNG 1: PHÂN BỔ KÊNH (TRAFFIC SOURCE) & TOP CREATORS -->
+    <div class="dashboard-grid-2 mb-4">
+        <!-- Phân bổ theo Nguồn phát sinh đơn (Traffic Source) -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-solid fa-satellite-dish"></i> Doanh Thu Theo Kênh Bán TikTok Shop
+                </div>
+                <span class="badge badge-info">Đặc Thù Nền Tảng</span>
+            </div>
+            <div class="card-body">
+                <div class="traffic-list">
+                    {% for tr in traffic_stats %}
+                    <div class="traffic-item">
+                        <div class="traffic-info">
+                            <span class="traffic-name">
+                                <i class="fa-solid {% if 'Livestream' in tr._id %}fa-video text-danger{% elif 'Video' in tr._id %}fa-film text-primary{% elif 'Showcase' in tr._id %}fa-store text-warning{% else %}fa-magnifying-glass text-info{% endif %}"></i>
+                                {{ tr._id }}
+                            </span>
+                            <span class="traffic-value"><strong>{{ "{:,.0f}".format(tr.revenue) }} đ</strong> ({{ "{:,}".format(tr.count) }} đơn)</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill {% if 'Livestream' in tr._id %}bg-live{% elif 'Video' in tr._id %}bg-video{% elif 'Showcase' in tr._id %}bg-showcase{% else %}bg-search{% endif %}" style="width: {{ (tr.revenue / total_revenue * 100) if total_revenue else 0 }}%;"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Creators / KOLs có doanh thu cao nhất -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-solid fa-award"></i> Top Creators / KOLs Tiếp Thị Liên Kết (Affiliate)
+                </div>
+                <span class="badge badge-success">Xếp Hạng Doanh Thu</span>
+            </div>
+            <div class="card-body">
+                <div class="creator-rank-list">
+                    {% for cr in top_creators %}
+                    <div class="creator-rank-item">
+                        <div class="rank-badge rank-{{ loop.index }}">{{ loop.index }}</div>
+                        <div class="creator-info">
+                            <strong>{{ cr._id }}</strong>
+                            <small class="text-muted">{{ "{:,}".format(cr.orders) }} đơn hoàn thành</small>
+                        </div>
+                        <div class="creator-revenue">
+                            <strong>{{ "{:,.0f}".format(cr.revenue) }} đ</strong>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HÀNG 2: BẢNG ĐƠN HÀNG GẦN ĐÂY & NGÀNH HÀNG -->
+    <div class="dashboard-layout">
+        <!-- Đơn hàng gần đây -->
+        <div class="card flex-2">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Giao Dịch TikTok Shop Mới Nhất
+                </div>
+                <a href="{{ url_for('view_transactions') }}" class="btn-text">Xem tất cả 8.500 đơn &rarr;</a>
+            </div>
+            <div class="card-body table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Mã Đơn</th>
+                            <th>Khách Hàng</th>
+                            <th>Sản Phẩm</th>
+                            <th>Kênh Bán</th>
+                            <th>Thành Tiền</th>
+                            <th>Trạng Thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ord in recent_orders %}
+                        <tr>
+                            <td><strong>{{ ord.Order_ID }}</strong></td>
+                            <td>{{ ord.Customer_Name }}</td>
+                            <td class="text-truncate" title="{{ ord.Product_Name }}">{{ ord.Product_Name }}</td>
+                            <td>
+                                <span class="badge-traffic {% if 'Livestream' in ord.Traffic_Source %}badge-live{% else %}badge-channel{% endif %}">
+                                    {{ ord.Traffic_Source }}
+                                </span>
+                            </td>
+                            <td><strong>{{ "{:,.0f}".format(ord.Total_Amount) }} đ</strong></td>
+                            <td>
+                                <span class="badge-status status-{{ 'success' if ord.Order_Status == 'Hoàn thành' or ord.Order_Status == 'Hoan thanh' else ('warning' if ord.Order_Status == 'Đang vận chuyển' or ord.Order_Status == 'Dang giao' else 'danger') }}">
+                                    {{ ord.Order_Status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Ngành hàng chủ lực & Admin Quick Links -->
+        <div class="card flex-1">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-solid fa-layer-group"></i> Ngành Hàng Hàng Đầu
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="category-list">
+                    {% for cat in cat_stats %}
+                    <div class="category-item">
+                        <div class="cat-info">
+                            <span class="cat-name">{{ cat._id }}</span>
+                            <span class="cat-count">{{ "{:,}".format(cat.count) }} đơn</span>
+                        </div>
+                        <div class="cat-bar">
+                            <div class="cat-bar-fill" style="width: {{ (cat.count / total_orders * 100) if total_orders else 0 }}%;"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if g.user.role == 'Admin' %}
+                <div class="admin-quick-box mt-4">
+                    <div class="admin-quick-header">
+                        <i class="fa-solid fa-shield-halved"></i> Quản Trị Hệ Thống (Chỉ Dành Cho Admin)
+                    </div>
+                    <p>Bạn có toàn quyền cấp phát, thay đổi vai trò hoặc khóa tài khoản thành viên.</p>
+                    <a href="{{ url_for('user_management') }}" class="btn btn-outline-admin btn-sm">
+                        <i class="fa-solid fa-users-gear"></i> Mở Bảng Quản Trị Phân Quyền
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+
+    {% elif g.user and g.user.role == 'Staff' %}
+    <!-- ===================== STAFF (NHÂN VIÊN VẬN HÀNH) ===================== -->
+    <div class="role-section-header role-staff-header">
+        <i class="fa-solid fa-user-tie"></i>
+        <span>STAFF — BẢNG THEO DÕI ĐƠN HÀNG & GIAO DỊCH</span>
+    </div>
+    <div class="dashboard-layout">
+        <div class="card flex-2">
+            <div class="card-header">
+                <div class="card-title"><i class="fa-solid fa-receipt"></i> Đơn Hàng Gần Đây</div>
+                <a href="{{ url_for('view_transactions') }}" class="btn-text">Xem toàn bộ 8.500 đơn &rarr;</a>
+            </div>
+            <div class="card-body table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Mã Đơn</th>
+                            <th>Khách Hàng</th>
+                            <th>Sản Phẩm</th>
+                            <th>Thành Tiền</th>
+                            <th>Trạng Thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ord in recent_orders %}
+                        <tr>
+                            <td><strong>{{ ord.Order_ID }}</strong></td>
+                            <td>{{ ord.Customer_Name }}</td>
+                            <td>{{ ord.Product_Name }}</td>
+                            <td><strong>{{ "{:,.0f}".format(ord.Total_Amount) }} đ</strong></td>
+                            <td>
+                                <span class="badge-status status-{{ 'success' if 'Hoàn thành' in ord.Order_Status or 'Hoan thanh' in ord.Order_Status else 'warning' }}">
+                                    {{ ord.Order_Status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card flex-1">
+            <div class="card-header">
+                <div class="card-title"><i class="fa-solid fa-circle-info"></i> Giới Hạn Quyền Hạn</div>
+            </div>
+            <div class="card-body">
+                <div class="staff-notice-box">
+                    <p>Tài khoản <strong>Staff</strong> có quyền xem danh sách đơn hàng để kiểm tra vận hành, nhưng <strong>không thể quản trị người dùng</strong> và không thể thay đổi vai trò hệ thống.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    {% else %}
+    <!-- ===================== USER (KHÁCH HÀNG THÀNH VIÊN) ===================== -->
+    <div class="role-section-header role-user-header">
+        <i class="fa-solid fa-user"></i>
+        <span>USER — TRANG THÔNG TIN THÀNH VIÊN</span>
+    </div>
+    <div class="user-restricted-panel">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title"><i class="fa-solid fa-id-badge"></i> Thông Tin Tài Khoản</div>
+            </div>
+            <div class="card-body">
+                <div class="user-profile-display">
+                    <div class="user-avatar-lg">
+                        {{ g.user.fullname[0] if g.user and g.user.fullname else 'U' }}
+                    </div>
+                    <div class="user-profile-info">
+                        <h3>{{ g.user.fullname }}</h3>
+                        <p><i class="fa-solid fa-user"></i> Tên đăng nhập: <strong>{{ g.user.username }}</strong></p>
+                        <p><i class="fa-solid fa-envelope"></i> Email: <strong>{{ g.user.email }}</strong></p>
+                        <p><i class="fa-solid fa-shield-halved"></i> Vai trò: <span class="role-badge role-user">User</span></p>
+                        <a href="{{ url_for('profile') }}" class="btn btn-primary" style="margin-top:1rem;">
+                            <i class="fa-solid fa-pen-to-square"></i> Chỉnh Sửa Hồ Sơ / Đổi Mật Khẩu
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="access-denied-info">
+            <div class="access-denied-icon">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div class="access-denied-text">
+                <h4>Cơ Chế Phân Quyền Người Dùng (RBAC)</h4>
+                <p>Hệ thống tự động bảo vệ tài nguyên Big Data theo từng vai trò xác thực. Tài khoản cấp <strong>User</strong> không có quyền xem cơ sở dữ liệu giao dịch 8.500 đơn hàng hay các số liệu kinh doanh nội bộ của TikTok Shop.</p>
+                <ul class="restricted-list">
+                    <li><i class="fa-solid fa-xmark text-danger"></i> Toàn bộ 8.500 đơn hàng TikTok Shop — <em>Bị chặn truy cập</em></li>
+                    <li><i class="fa-solid fa-xmark text-danger"></i> Thống kê doanh thu GMV & KOLs — <em>Bị chặn truy cập</em></li>
+                    <li><i class="fa-solid fa-xmark text-danger"></i> Quản trị tài khoản & phân quyền — <em>Bị chặn truy cập</em></li>
+                    <li><i class="fa-solid fa-check text-success"></i> Xem và chỉnh sửa hồ sơ cá nhân — <em>Được phép</em></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
