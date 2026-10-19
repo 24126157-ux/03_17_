@@ -7,15 +7,23 @@ Thành viên thực hiện: qhy
 """
 
 import os
+import sys
 import csv
 import json
 import urllib.request
 from datetime import datetime
 
+# Đảm bảo in tiếng Việt chuẩn trên console Windows
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 # ==============================================================================
 # 1. CẤU HÌNH THÔNG TIN KẾT NỐI MONGODB ATLAS
 # ==============================================================================
-# Lưu ý: Thay đổi Connection String nếu sử dụng tài khoản khác
 MONGODB_URI = os.getenv(
     "MONGODB_URI",
     "mongodb+srv://24126088_db_user:HL5evsytleNo4V0p@cluster0.e1l29uo.mongodb.net/?retryWrites=true&w=majority"
@@ -23,9 +31,9 @@ MONGODB_URI = os.getenv(
 DATABASE_NAME = "ecommerce"
 COLLECTION_NAME = "transactions"
 
-# Đường dẫn file dữ liệu giao dịch TMĐT nội bộ
+# Đường dẫn file dữ liệu TikTok Shop mới
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATASET_PATH = os.path.join(BASE_DIR, "..", "dataset", "ecommerce_transactions.csv")
+DATASET_PATH = os.path.join(BASE_DIR, "..", "dataset", "tiktok_shop_sales.csv")
 
 
 # ==============================================================================
@@ -56,13 +64,13 @@ def fetch_online_product_catalog():
 
 
 # ==============================================================================
-# 3. ĐỌC VÀ CHUẨN BỊ DỮ LIỆU TỪ TẬP DATASET NỘI BỘ (> 5000 DÒNG)
+# 3. ĐỌC VÀ CHUẨN BỊ DỮ LIỆU TỪ TẬP DATASET TIKTOK SHOP (> 8.000 DÒNG, 27 CỘT)
 # ==============================================================================
 def load_transaction_dataset():
     """
-    Đọc dữ liệu giao dịch TMĐT từ tệp CSV nội bộ
+    Đọc dữ liệu giao dịch TikTok Shop từ tệp CSV
     """
-    print(f"[2/3] Đang đọc tập dữ liệu giao dịch tại: {DATASET_PATH}...")
+    print(f"[2/3] Đang đọc tập dữ liệu TikTok Shop tại: {DATASET_PATH}...")
     if not os.path.exists(DATASET_PATH):
         raise FileNotFoundError(f"Không tìm thấy file: {DATASET_PATH}")
     
@@ -72,16 +80,25 @@ def load_transaction_dataset():
         for row in reader:
             # Chuyển đổi các trường số sang đúng kiểu dữ liệu
             try:
-                row["Age"] = int(row["Age"])
-                row["Quantity"] = int(row["Quantity"])
-                row["Unit_Price"] = float(row["Unit_Price"])
-                row["Total_Amount"] = float(row["Total_Amount"])
-                row["Rating"] = int(row["Rating"])
+                row["Customer_Age"] = int(row.get("Customer_Age", 0))
+                row["Unit_Price"] = float(row.get("Unit_Price", 0))
+                row["Quantity"] = int(row.get("Quantity", 1))
+                row["Discount_Amount"] = float(row.get("Discount_Amount", 0))
+                row["Shipping_Fee"] = float(row.get("Shipping_Fee", 0))
+                row["Total_Amount"] = float(row.get("Total_Amount", 0))
+                row["Product_Rating"] = float(row.get("Product_Rating", 5.0))
+                row["Review_Count"] = int(row.get("Review_Count", 0))
+                row["Video_Views"] = int(row.get("Video_Views", 0))
+                row["Is_Anomaly"] = int(row.get("Is_Anomaly", 0))
+                # Trường tương thích ngược cho giao diện cũ
+                row["Category"] = row.get("Main_Category", "")
+                row["Age"] = row["Customer_Age"]
+                row["Gender"] = row.get("Customer_Gender", "")
             except (ValueError, KeyError):
                 pass
             records.append(row)
             
-    print(f" -> Đã đọc thành công {len(records)} dòng giao dịch TMĐT.")
+    print(f" -> Đã đọc thành công {len(records)} dòng giao dịch TikTok Shop (27 thuộc tính).")
     return records
 
 
@@ -97,7 +114,6 @@ def sync_to_mongodb(records):
         from pymongo import MongoClient
     except ImportError:
         print(" -> Thư viện 'pymongo' chưa được cài đặt. Chạy lệnh: pip install pymongo dnspython")
-        print(" -> Bạn hoàn toàn có thể import trực tiếp file CSV bằng MongoDB Compass như hướng dẫn!")
         return
 
     try:
@@ -105,21 +121,21 @@ def sync_to_mongodb(records):
         db = client[DATABASE_NAME]
         col = db[COLLECTION_NAME]
 
-        # Kiểm tra số lượng bản ghi hiện có
-        count = col.count_documents({})
-        print(f" -> Hiện có {count} documents trong collection '{COLLECTION_NAME}'.")
+        # Làm mới dữ liệu cũ để đồng bộ chính xác dữ liệu TikTok Shop mới
+        existing_count = col.count_documents({})
+        if existing_count > 0:
+            print(f" -> Đang làm mới dữ liệu cũ ({existing_count} bản ghi)...")
+            col.delete_many({})
 
-        # Nạp dữ liệu theo batch (1000 records/lần)
-        if count < len(records):
-            print(" -> Tiến hành chèn dữ liệu mới...")
-            batch_size = 1000
-            for i in range(0, len(records), batch_size):
-                batch = records[i:i + batch_size]
-                col.insert_many(batch)
-                print(f"   + Đã chèn {min(i + batch_size, len(records))}/{len(records)} bản ghi...")
-            print(" -> Hoàn tất đồng bộ toàn bộ dữ liệu lên MongoDB Atlas!")
-        else:
-            print(" -> Dữ liệu đã đầy đủ trên MongoDB Atlas, không cần nạp lại.")
+        print(" -> Tiến hành nạp 8.500 bản ghi TikTok Shop vào MongoDB Atlas...")
+        batch_size = 1000
+        for i in range(0, len(records), batch_size):
+            batch = records[i:i + batch_size]
+            col.insert_many(batch)
+            print(f"   + Đã chèn {min(i + batch_size, len(records))}/{len(records)} bản ghi...")
+        
+        final_count = col.count_documents({})
+        print(f" -> Hoàn tất đồng bộ toàn bộ {final_count} documents TikTok Shop lên MongoDB Atlas!")
 
     except Exception as err:
         print(f" -> Lỗi khi kết nối MongoDB: {err}")
@@ -130,18 +146,18 @@ def sync_to_mongodb(records):
 # ==============================================================================
 if __name__ == "__main__":
     print("=============================================================")
-    print(" CHƯƠNG TRÌNH THU THẬP & ĐỒNG BỘ DỮ LIỆU TMĐT - BIG DATA LAB")
+    print(" CHƯƠNG TRÌNH THU THẬP & ĐỒNG BỘ DỮ LIỆU TIKTOK SHOP - NHÓM 17")
     print("=============================================================")
     
     # 1. Thu thập dữ liệu từ nguồn API mở rộng
     api_catalog = fetch_online_product_catalog()
     
-    # 2. Đọc dữ liệu giao dịch nội bộ
+    # 2. Đọc dữ liệu giao dịch TikTok Shop
     transactions = load_transaction_dataset()
     
     # 3. Đồng bộ lên CSDL MongoDB
     sync_to_mongodb(transactions)
     
     print("=============================================================")
-    print(" HOÀN THÀNH QUY TRÌNH THU THẬP VÀ ĐỒNG BỘ DỮ LIỆU!")
+    print(" HOÀN THÀNH QUY TRÌNH THU THẬP VÀ ĐỒNG BỘ DỮ LIỆU TIKTOK SHOP!")
     print("=============================================================")
