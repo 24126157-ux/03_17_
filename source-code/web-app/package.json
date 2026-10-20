@@ -8,6 +8,9 @@
     "start": "next start"
   },
   "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.3",
+    "lucide-react": "^1.60.0",
     "mongodb": "^7.7.0",
     "mongoose": "^9.11.2",
     "next": "16.4.2",
