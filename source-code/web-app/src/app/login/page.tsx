@@ -37,7 +37,7 @@ export default function LoginPage() {
 
   // Tự động gọi seed tài khoản mẫu một lần
   useEffect(() => {
-    fetch("/api/auth/seed").catch(() => {});
+    fetch("/api/auth/seed").catch(() => { });
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -99,11 +99,7 @@ export default function LoginPage() {
           <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mt-1 uppercase tracking-wider">
             Cổng Phân Tích Dữ Liệu Lớn & Quản Trị Hệ Thống • Nhóm 17
           </p>
-          <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-[11px] font-medium border border-indigo-200/60 dark:border-indigo-800/60">
-            <Sparkles className="w-3.5 h-3.5" /> Nhiệm vụ 1B: Xác thực & Phân quyền RBAC
-          </div>
         </div>
-
         {/* Alerts */}
         {errorMessage && (
           <div className="mb-6 p-3.5 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900/60 flex items-start gap-2.5 text-red-700 dark:text-red-300 text-xs font-medium animate-shake">

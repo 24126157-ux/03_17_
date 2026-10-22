@@ -90,10 +90,6 @@ def load_transaction_dataset():
                 row["Review_Count"] = int(row.get("Review_Count", 0))
                 row["Video_Views"] = int(row.get("Video_Views", 0))
                 row["Is_Anomaly"] = int(row.get("Is_Anomaly", 0))
-                # Trường tương thích ngược cho giao diện cũ
-                row["Category"] = row.get("Main_Category", "")
-                row["Age"] = row["Customer_Age"]
-                row["Gender"] = row.get("Customer_Gender", "")
             except (ValueError, KeyError):
                 pass
             records.append(row)
